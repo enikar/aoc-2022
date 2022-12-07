@@ -69,13 +69,13 @@ formatDatas input = (makeStacks q, buildMoves m)
 makeStacks :: String -> Stacks
 makeStacks q = snd (foldl' buildStack e0 ls)
   where
-    qs = tail (reverse (lines q))
+    qs = init (lines q)
     ls = transpose (map readStacks qs)
     e0 = (1, M.empty)
-    trim = takeWhile ("" /=)
+    trim = dropWhile ("" ==)
     buildStack (cnt, stacks0) x = (cnt+1, stacks)
       where
-        stacks = M.insert cnt (reverse (trim x)) stacks0
+        stacks = M.insert cnt (trim x) stacks0
 
 readStacks :: String -> [String]
 readStacks "" = []
