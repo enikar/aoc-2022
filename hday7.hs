@@ -1,7 +1,7 @@
 -- 2022/12/07
 -- Solution of AoC 2022 7th day.
 
-import Data.List (intercalate, scanl', foldl')
+import Data.List (intercalate, foldl')
 import Data.List.Extra (splitOn)
 
 import Data.Maybe (fromMaybe)
@@ -46,32 +46,25 @@ cmdLs dir = foldl' go (0, [])
         "dir" -> (size, intercalate "/" [dir , name] : dirs)
         _     -> (size + readInt dn, dirs)
 
-cmdCd :: Directory -> String -> Hierarchy -> (Hierarchy, Directory)
-cmdCd dir0 new fs0 =
+cmdCd :: String -> CurrentState -> CurrentState
+cmdCd new (dir0, fs0) =
   case new of
     ".." -> let dir = intercalate "/" (init (splitOn "/" dir0))
                 size0 = fs0 ! dir0
                 size = fs0 ! dir
             in
-              (insert dir (size+size0) fs0, dir)
-    _    -> (fs0, intercalate "/" [dir0, new])
+              (dir, insert dir (size+size0) fs0)
+    _    -> (intercalate "/" [dir0, new], fs0)
 
 
-buildDirs :: String -> [String]
-buildDirs dir = drop 1 (scanl' go "" ls)
-  where go acc s = intercalate "/" [acc, s]
-        ls = drop 1 (splitOn "/" dir)
-
-collectSize :: (Directory, Hierarchy) -> Hierarchy
-collectSize (dir, h0) = fst $ foldr go (h0, size0) dirs
+reportSize :: CurrentState -> Hierarchy
+reportSize = snd . until satisfy improve
   where
-    dirs = init (buildDirs dir)
-    size0 = h0 ! dir
-    go d (h, size) = let size' =  size + h ! d
-                     in (insert d size' h, size')
+    satisfy (dir, _) = dir == "/"
+    improve  = cmdCd ".."
 
 exeCmds :: CurrentState -> [Cmd] -> Hierarchy
-exeCmds (dir0, fs0) = collectSize . foldl' go (dir0, fs0)
+exeCmds (dir0, fs0) = reportSize . foldl' go (dir0, fs0)
   where
     go (dir, fs) cmd =
       let ([c], ls) = splitAt 1 cmd
@@ -81,8 +74,7 @@ exeCmds (dir0, fs0) = collectSize . foldl' go (dir0, fs0)
                           createDirs acc d = insert d 0 acc
                       in (dir, fs')
               _    -> let [_, dn] = words c -- this is a cd
-                          (fs', new) = cmdCd dir dn fs
-                      in (new, fs')
+                      in  cmdCd dn (dir, fs)
 
 
 part1 :: Hierarchy -> Int
@@ -92,11 +84,11 @@ part1 = M.foldl' sumIt 0
           | otherwise   = acc
 
 part2 :: Hierarchy -> Int
-part2 fs = M.foldl' minimize totalSpace fs
+part2 fs = M.foldl' minimize rootSize fs
   where
-    totalSpace = 70000000
-    rootSize = fs ! "/"
-    freeSpace = totalSpace - rootSize
+    rootSize = 70000000
+    occupied = fs ! "/"
+    freeSpace = rootSize - occupied
     needed = 30000000 - freeSpace
 
     minimize acc v
