@@ -50,8 +50,11 @@
                   (name (cadr elts)))
              (if (string= dn "dir")
                  (mkdir (append dir (list name)) fs)
-                 (ignore-errors (parse-integer dn))))))
-    (reduce #'+ (mapcar #'read-entry content))))
+                 (let ((size (parse-integer dn)))
+                   (incsize size dir fs))))))
+    (progn
+      (mapc #'read-entry content)
+      (values dir fs))))
 
 (defun cmd-cd (dest dir fs)
   (if (string= dest "..")
@@ -64,15 +67,14 @@
   (multiple-value-bind (new size) (cmd-cd dest dir fs)
     (progn
       (incsize size new fs)
-      new)))
+      (values new fs)))
 
 (defun execute-cmds (cmds fs)
   (let ((cur root-dir))
     (flet ((exe-one-cmd (cmd)
              (let ((c (car cmd)))
                (if (string= c "ls")
-                   (let ((size (cmd-ls (cdr cmd) cur fs)))
-                     (setsize size cur fs))
+                   (cmd-ls (cdr cmd) cur fs)
                    (let ((dest (cadr (str:words c))))
                      (setq cur (execute-cd dest cur fs)))))))
       (progn (mapc #'exe-one-cmd cmds)
