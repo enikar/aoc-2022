@@ -3,6 +3,11 @@
 (load #p"~/quicklisp/setup.lisp")
 (ql:quickload "str")
 
+(if (find-package :lday7)
+    (progn
+      (unuse-package :lday7)
+      (delete-package :lday7)))
+
 (defpackage :lday7
   (:use :common-lisp)
   (:export
@@ -10,109 +15,88 @@
    #:main
    #:part1
    #:part2
-   #:execute-cmds
-   #:getsize)
+   #:execute-cmds)
   )
 
 
 (in-package :lday7)
 
-(defvar *my-files*
-  (make-hash-table :test #'equal))
+(defun setsize (size dir root-fs)
+  (setf (gethash dir root-fs) size))
 
-(defun getsize (dir)
-  (gethash dir *my-files*))
+(defun incsize (size dir root-fs)
+  (incf (gethash dir root-fs) size))
 
-(defun setsize (dir size)
-  (setf (gethash dir *my-files*) size))
+(defun mkdir (dir root-fs)
+  (setsize 0 dir root-fs))
 
-(defun incsize (dir size)
-  (incf (gethash dir *my-files*) size))
+(defconstant root-dir '("/"))
 
-(defun reset-my-files ()
-  (progn
-    (clrhash *my-files*)
-    (setsize "/" 0)))
+(defun initial-root-fs ()
+  (let ((root-fs (make-hash-table :test #'equal)))
+    (progn
+      (mkdir root-dir root-fs)
+      root-fs)))
 
 (defun read-datas (fname)
   (let* ((s (uiop:read-file-string fname))
           (datas (str:split "$ " s)))
     (mapcar #'str:lines (cddr datas))))
 
+(defun cmd-ls (content dir fs)
+  (flet ((read-entry (entry)
+           (let* ((elts (str:words entry))
+                  (dn (car elts))
+                  (name (cadr elts)))
+             (if (string= dn "dir")
+                 (mkdir (append dir (list name)) fs)
+                 (ignore-errors (parse-integer dn))))))
+    (reduce #'+ (mapcar #'read-entry content))))
 
-(defun getsize (dir)
-  (gethash dir *my-files*))
-
-(defun setsize (dir size)
-  (setf (gethash dir *my-files*) size))
-
-(defun incsize (dir size)
-  (incf (gethash dir *my-files*) size))
-
-(defun reset-my-files ()
-  (progn
-    (clrhash *my-files*)
-    (setsize "/" 0)))
-
-
-(defun cmd-ls (dir content)
-  (reduce #'+
-          (mapcar (lambda(entry)
-                    (let* ((elts (str:words entry))
-                           (dn (car elts))
-                           (name (cadr elts)))
-                      (if (string= dn "dir")
-                          (setsize (str:join "/" (list dir name))
-                                   0)
-                          (ignore-errors (parse-integer dn)))))
-                  content)))
-
-(defun cmd-cd (cur dest)
+(defun cmd-cd (dest dir fs)
   (if (string= dest "..")
-      (let* ((dirs (str:split "/" cur))
-             (new (str:join "/" (butlast dirs))))
-        (values new (getsize cur)))
-      (values (str:join "/" (list cur dest))
+      (values (butlast dir)
+              (gethash dir fs))
+      (values (append dir (list dest))
               0)))
 
-(defun execute-cd (cur dest)
-  (multiple-value-bind (new size) (cmd-cd cur dest)
+(defun execute-cd (dest dir fs)
+  (multiple-value-bind (new size) (cmd-cd dest dir fs)
     (progn
-      (incsize new size)
+      (incsize size new fs)
       new)))
 
-(defun execute-cmds (cmds)
-  (let ((cur "/"))
-    (progn (reset-my-files)
-           (mapc (lambda(cmd)
-                   (let ((c (car cmd)))
-                     (if (string= c "ls")
-                         (let ((size (cmd-ls cur (cdr cmd))))
-                           (setsize cur size))
-                         (let ((dest (cadr (str:words c))))
-                           (setq cur (execute-cd cur dest))))))
-                 cmds)
-           (loop
-             (if (string= "/" cur)
-                 (return (getsize cur))
-                 (setq cur (execute-cd cur "..")))))))
+(defun execute-cmds (cmds fs)
+  (let ((cur root-dir))
+    (flet ((exe-one-cmd (cmd)
+             (let ((c (car cmd)))
+               (if (string= c "ls")
+                   (let ((size (cmd-ls (cdr cmd) cur fs)))
+                     (setsize size cur fs))
+                   (let ((dest (cadr (str:words c))))
+                     (setq cur (execute-cd dest cur fs)))))))
+      (progn (mapc #'exe-one-cmd cmds)
+             (loop
+               (if (equal cur root-dir)
+                   (return fs)
+                   (setq cur (execute-cd ".." cur fs))))))))
 
-(defun part1 ()
-  (loop for v being the hash-values in *my-files*
+(defun part1 (fs)
+  (loop for v being the hash-values in fs
         when (<= v 100000)
           sum v))
 
-(defun part2 ()
-  (let* ((root-size (getsize "/"))
-         (free-space (- 70000000 root-size))
+(defun part2 (fs)
+  (let* ((occupied (gethash root-dir fs))
+         (free-space (- 70000000 occupied))
          (needed (- 30000000 free-space)))
-    (loop for v being the hash-values in *my-files*
+    (loop for v being the hash-values in fs
           when (>= v needed)
             minimize v)))
 
 
 (defun main ()
-  (let ((datas (read-datas "input.txt")))
-    (execute-cmds datas)
-    (format T "~&Part1: ~A~%" (part1))
-    (format T "~&Part2: ~A~%" (part2))))
+  (let* ((datas (read-datas "input.txt"))
+         (root-fs (execute-cmds datas (initial-root-fs))))
+    (format T "~&Part1: ~A~%" (part1 root-fs))
+    (format T "~&Part2: ~A~%" (part2 root-fs))))
