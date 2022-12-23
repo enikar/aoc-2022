@@ -45,9 +45,7 @@
 
 (defun cmd-ls (content dir fs)
   (flet ((read-entry (entry)
-           (let* ((elts (str:words entry))
-                  (dn (car elts))
-                  (name (cadr elts)))
+           (destructuring-bind (dn name) (str:words entry)
              (if (string= dn "dir")
                  (mkdir (append dir (list name)) fs)
                  (let ((size (parse-integer dn)))
