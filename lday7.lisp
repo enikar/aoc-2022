@@ -67,7 +67,7 @@
   (multiple-value-bind (new size) (cmd-cd dest dir fs)
     (progn
       (incsize size new fs)
-      (values new fs)))
+      (values new fs))))
 
 (defun execute-cmds (cmds fs)
   (let ((cur root-dir))
