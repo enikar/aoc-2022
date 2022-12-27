@@ -3,11 +3,12 @@
 
 import Data.List.Extra (chunksOf, groupSortOn)
 import Data.Foldable (foldl', forM_)
+
 import Data.Array.Unboxed (UArray
-                          ,elems
                           ,bounds
                           ,indices
                           ,(!))
+
 import Data.Array.ST (runSTUArray
                      ,newArray_
                      ,writeArray)
@@ -20,15 +21,28 @@ readInt x = fromMaybe errReadInt (readMaybe x)
   where
     errReadInt = error ("Error: readInt: not an Int: " <> x)
 
+type Idx = ((Int,Int), (Int,Int))
+type MyArray = UArray (Int, Int) Int
 
-formatDatas :: String -> [[Int]]
-formatDatas content =
-  fmap readInt . chunksOf 1 <$> lines content
+indexes :: Int -> Int -> Idx
+indexes m n = ((1,1), (m,n))
 
+
+formatDatas :: String -> MyArray
+formatDatas content = runSTUArray $ do
+  a <- newArray_ (indexes m n)
+  forM_ (zip [1..] ls) $ \(j, line) ->
+    forM_ (zip [1..] (chunksOf 1 line)) $ \(i, s) ->
+      writeArray a (i, j) (readInt s)
+  pure a
+      where
+        ls = lines content
+        n = length ls
+        m = length (head ls)
 
 main :: IO ()
 main = do
-  arr <- fromLists . formatDatas <$> readFile "input.txt"
+  arr <-  formatDatas <$> readFile "input.txt"
   printSolution "Part1" (part1 arr)
   printSolution "Part2" (part2 arr)
 
@@ -36,47 +50,29 @@ printSolution :: Show a => String -> a -> IO ()
 printSolution part sol =
   putStrLn (part <> ": " <> show sol)
 
-part1 :: UArray (Int, Int) Int -> Int
-part1 = foldl' countVisible 0 . elems . visibilities
+part1 :: MyArray -> Int
+part1 = foldl' countVisible 0 . compute isVisible
   where
     countVisible acc True = acc + 1
     countVisible acc _    = acc
 
-part2 :: UArray (Int, Int) Int -> Int
-part2 = maximum . elems . scenicScores
+part2 :: MyArray -> Int
+part2 = maximum . compute scenicScore
 
-type Idx = ((Int,Int), (Int,Int))
+{-# INLINE compute #-}
+compute :: (Idx -> MyArray -> (Int, Int) -> a) -> MyArray -> [a]
+compute f arr =
+  [f ixes arr (i,j)| j <- [yi..ys], i <- [xi..xs]]
 
-indexes :: Int -> Int -> Idx
-indexes m n = ((1,1), (m,n))
+  where ixes@((xi, yi), (xs, ys)) = bounds arr
 
-fromLists :: [[Int]] -> UArray (Int, Int) Int
-fromLists datas = runSTUArray $ do
-   a <- newArray_ (indexes m n)
-   forM_ (zip [1..n] datas) $ \(j, xs) ->
-     forM_ (zip [1..m] xs) $ \(i, x) ->
-       writeArray a (i, j) x
-   pure a
-     where
-       m = length (head datas)
-       n = length datas
-
-visibilities :: UArray (Int, Int) Int -> UArray (Int, Int) Bool
-visibilities arr = runSTUArray $ do
-  let ixes@((xi, yi), (xs, ys)) = bounds arr
-  a <- newArray_ ixes
-  forM_ [yi..ys] $ \j ->
-    forM_ [xi..xs] $ \i ->
-      writeArray a (i,j) (isVisible ixes arr (i,j))
-  pure a
-
-isVisible :: Idx -> UArray (Int,Int) Int -> (Int, Int) -> Bool
+isVisible :: Idx -> MyArray -> (Int, Int) -> Bool
 isVisible ((xi, yi), (xs, ys))  arr (x0,y0) =
   x0 == xi || x0 == xs || y0 == yi || y0 == ys ||
-  all (\ix -> arr ! ix < tree) xInf ||
-  all (\ix -> arr ! ix < tree) xSup ||
-  all (\ix -> arr ! ix < tree) yInf ||
-  all (\ix -> arr ! ix < tree) ySup
+  all infTree xInf ||
+  all infTree xSup ||
+  all infTree yInf ||
+  all infTree ySup
   where
     tree = arr ! (x0,y0)
     allIdx = indices arr
@@ -85,17 +81,9 @@ isVisible ((xi, yi), (xs, ys))  arr (x0,y0) =
     [xInf, _, xSup] = groupSortOn (\(_, y) -> compare y y0) xIdx
     [yInf, _, ySup] = groupSortOn (\(x, _) -> compare x x0) yIdx
 
-scenicScores :: UArray (Int, Int) Int -> UArray (Int, Int) Int
-scenicScores arr = runSTUArray $ do
-  let ixes@((xi, yi), (xs, ys)) = bounds arr
-  a <- newArray_ ixes
-  forM_ [yi..ys] $ \j ->
-    forM_ [xi..xs] $ \i ->
-      writeArray a (i,j) (scenicScore ixes arr (i,j))
-  pure a
+    infTree ix = arr ! ix < tree
 
-
-scenicScore :: Idx -> UArray (Int, Int) Int -> (Int, Int) -> Int
+scenicScore :: Idx -> MyArray -> (Int, Int) -> Int
 scenicScore ((xi,yi),(xs, ys)) arr (x0,y0) =
   if x0 == xi || x0 == xs || y0 == yi || y0 == ys
   then 0
