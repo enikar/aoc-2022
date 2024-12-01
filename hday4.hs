@@ -29,7 +29,7 @@ formatDatas = map buildSetPairs . lines
 
 main :: IO ()
 main = do
-  datas <- formatDatas <$> readFile "input.txt"
+  datas <- formatDatas <$> readFile "day4.txt"
   showSolution "Part1" (part1 datas)
   showSolution "Part2" (part2 datas)
 

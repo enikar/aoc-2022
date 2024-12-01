@@ -32,7 +32,7 @@ type CurrentState = (Directory, Hierarchy)
 
 main :: IO ()
 main = do
-  datas <- readDatas "input.txt"
+  datas <- readDatas "day7.txt"
   let rootFs = singleton ["/"] 0
       fs = exeCmds (["/"], rootFs) datas
   showSolution "Part1" (part1 fs)

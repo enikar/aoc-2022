@@ -12,7 +12,7 @@ import Data.Foldable (foldl')
 
 main :: IO ()
 main = do
-  datas <- lines <$> readFile "input.txt"
+  datas <- lines <$> readFile "day2.txt"
   showSolution "Part1" (solution pointsPart1 datas)
   showSolution "Part2" (solution pointsPart2 datas)
 

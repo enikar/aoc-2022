@@ -96,7 +96,7 @@
 
 
 (defun main ()
-  (let* ((datas (read-datas "input.txt"))
+  (let* ((datas (read-datas "day7.txt"))
          (root-fs (execute-cmds datas (initial-root-fs))))
     (format T "~&Part1: ~A~%" (part1 root-fs))
     (format T "~&Part2: ~A~%" (part2 root-fs))))

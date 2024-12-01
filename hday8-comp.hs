@@ -42,7 +42,7 @@ formatDatas content = runSTUArray $ do
 
 main :: IO ()
 main = do
-  arr <-  formatDatas <$> readFile "input.txt"
+  arr <-  formatDatas <$> readFile "day8.txt"
   printSolution "Part1" (part1 arr)
   printSolution "Part2" (part2 arr)
 

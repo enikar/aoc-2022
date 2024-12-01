@@ -7,7 +7,7 @@ import qualified Data.Set as S
 
 main :: IO ()
 main = do
-  datas <- readFile "input.txt"
+  datas <- readFile "day6.txt"
   showSolution "Part1" (part1 datas)
   showSolution "Part2" (part2 datas)
 
