@@ -3,15 +3,18 @@
 
 import Data.List.Extra (splitOn)
 import Data.List (transpose)
-import Text.ParserCombinators.ReadP
-import Control.Applicative ((<|>))
-import Control.Monad (void, unless)
-import Control.Monad.Loops (allM)
+import Control.Monad (void)
 import Data.Char (isDigit)
 import qualified Data.IntMap.Strict as M
 import Data.IntMap.Strict (IntMap)
-import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
+import Text.ParserCombinators.ReadP (ReadP
+                                    ,skipSpaces
+                                    ,readP_to_S
+                                    ,eof
+                                    ,munch1
+                                    ,string
+                                    )
 
 data Move = Move {number :: Int
                  ,from :: Int
@@ -64,7 +67,13 @@ showSolution part sol =
 formatDatas :: String -> (Stacks, [Move])
 formatDatas input = (makeStacks q, buildMoves m)
   where
-    [q, m] = splitOn "\n\n" input
+    ins = splitOn "\n\n" input
+    q = case ins of
+      [x,_] -> x
+      _     -> error "formatDatas: malformed input."
+    m = case ins of
+      [_,x] -> x
+      _     -> error "formatDatas: malformed input."
 
 makeStacks :: String -> Stacks
 makeStacks q = snd (foldl' buildStack e0 ls)
@@ -95,38 +104,26 @@ readCrate cs = case cs of
 
 buildMoves :: String -> [Move]
 buildMoves = map f . lines
-  where f = fst . head . readP_to_S readMove
+  where
+    f ls = case readP_to_S readMove ls of
+             (x:_) -> fst x
+             []    -> error "buildMoves: a line is empty."
 
 readMove :: ReadP Move
 readMove = do
-  skipString "move"
+  void (string "move")
   skipSpaces
-  n <- numbers 1 <|> numbers 2
+  n <- integer
   skipSpaces
-  skipString "from"
+  void (string "from")
   skipSpaces
-  f <- numbers 1
+  f <- integer
   skipSpaces
-  skipString "to"
+  void (string "to")
   skipSpaces
-  t <- numbers 1
+  t <- integer
   eof
   pure (Move n f t)
 
-digit :: ReadP Char
-digit = satisfy isDigit
-
-numbers :: Int -> ReadP Int
-numbers n = fmap read (count n digit)
-
-skipString :: String -> ReadP ()
-skipString this = do
-  -- mequal :: Ord a => (a, a) -> ReadP Bool
-  -- mequal consumes input if x == y
-  let mequal (x,y) = if x == y
-                     then do void get
-                             pure True
-                     else pure False
-  s <- look
-  p <- allM mequal (zip s this)
-  unless p pfail
+integer :: ReadP Int
+integer = read <$> munch1 isDigit
