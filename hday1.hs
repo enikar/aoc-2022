@@ -3,7 +3,6 @@
 
 import Data.List.Extra (splitOn)
 import Data.List (sortBy)
-import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
@@ -34,5 +33,8 @@ showSolution part sol =
   putStrLn (part <> ": " <> show sol)
 
 part1, part2 :: [Int] -> Int
-part1 = head
+
+part1 (x:_) = x
+part1 []   = error "part1: the input list is empty."
+
 part2 = sum . take 3
