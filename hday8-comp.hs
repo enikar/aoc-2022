@@ -2,7 +2,7 @@
 -- Solution of AoC 2022, 8th day
 
 import Data.List.Extra (chunksOf, groupSortOn)
-import Data.Foldable (foldl', forM_)
+import Data.Foldable (forM_)
 
 import Data.Array.Unboxed (UArray
                           ,bounds
@@ -38,7 +38,9 @@ formatDatas content = runSTUArray $ do
       where
         ls = lines content
         n = length ls
-        m = length (head ls)
+        m = case ls of
+          (x:_) -> length x
+          []    -> error "formatDatas: first line of datas is empty."
 
 main :: IO ()
 main = do
