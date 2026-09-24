@@ -1,7 +1,6 @@
 -- 2022/12/29
 -- Solution of AoC 2022, 8th day
 
-import Data.Foldable (foldl')
 
 import Numeric.LinearAlgebra.Data
 
@@ -51,7 +50,7 @@ compute f mat = [f (cMax,rMax) mat (i,j)| j <- [0..rMax], i <- [0..cMax]]
     cMax = c-1
     rMax = r-1
 
--- Is the tree at (x0, y0) visible from the edge ?
+-- Is the tree at (x0, y0) visible from the edge?
 visible :: (Int,Int) -> MyMatrix -> (Int, Int) -> Bool
 visible (xs,ys) mat (x0,y0) =
   x0 == 0 || x0 == xs || y0 == 0 || y0 == ys ||
@@ -96,17 +95,19 @@ neighbour :: MyMatrix
           -> ([I], [I], [I],[I])
 neighbour mat (x0, y0) = (xInf, xSup, yInf, ySup)
   where
+    head' (x:_) = x
+    head' []    = error "neighbour: head': input list is empty."
     -- x and y are reversed for matrix manipulation.
     -- we need to give (row, column) as the index.
     -- y means row, x means column
     xInf = concat . toLists $ mat ?? (Take y0, Pos (idxs [x0]))
     xSup = concat . toLists $ mat ?? (Drop (y0+1), Pos (idxs [x0]))
-    yInf = head . toLists $ mat ?? (Pos (idxs [y0]), Take x0)
-    ySup = head . toLists $ mat ?? (Pos (idxs [y0]), Drop (x0+1))
+    yInf = head' . toLists $ mat ?? (Pos (idxs [y0]), Take x0)
+    ySup = head' . toLists $ mat ?? (Pos (idxs [y0]), Drop (x0+1))
 
 -- for testing in ghci
-sample :: IO MyMatrix
-sample = formatDatas <$> readFile "sample.txt"
+-- sample :: IO MyMatrix
+-- sample = formatDatas <$> readFile "sample.txt"
 
-view :: MyMatrix -> IO ()
-view = disp 0 . cmap fromIntegral
+-- view :: MyMatrix -> IO ()
+-- view = disp 0 . cmap fromIntegral
