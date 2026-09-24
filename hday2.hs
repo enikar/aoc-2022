@@ -1,14 +1,6 @@
 -- 2022/12/02
 -- Solution of Day2 of AoC 2022
 
--- import Data.List.Extra (splitOn)
--- import Data.List (sortBy)
-import Data.Foldable (foldl')
--- import Data.Maybe (fromMaybe)
--- import Text.Read (readMaybe)
-
--- data Choice = Rock | Papper | Scissors
--- data Game = Defeat | Draw | Win
 
 main :: IO ()
 main = do
@@ -25,14 +17,18 @@ solution points = foldl' sumIt 0
 errPoints :: [String] -> a
 errPoints s = error ("Invalid input: " <> show s)
 
-second :: [a] -> a
-second = head . tail
+second, head' :: [a] -> a
+second (_:x:_) = x
+second _      = error "second: the input list length is < 2."
+
+head' (x:_) = x
+head' []    = error "head': the input list is empty."
 
 -- For the game A = Rock, B = Paper and C = Scissors.
 -- For part1: X = Rock, Y = Paper and Z = Scissors
 pointsPart1 :: [String] -> Int
 pointsPart1 game =
-  case head game of
+  case head' game of
     "A" -> case second game of
              "X" -> 4 -- 1 + 3
              "Y" -> 8 -- 2 + 6
@@ -54,7 +50,7 @@ pointsPart1 game =
 -- For part2: X = defeated = 0, Y = draw = 3, Z = win = 6
 pointsPart2 :: [String] -> Int
 pointsPart2 game =
-  case head game of
+  case head' game of
     "A" -> case second game of -- Rock
              "X" ->  3  -- defeat = Scissor = 3 + 0
              "Y" ->  4  -- draw = Rock  = 1 + 3
